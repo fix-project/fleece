@@ -1,11 +1,16 @@
 #include <iostream>
 
 #include "socket.hh"
+#include "secure_socket.hh"
 
 using namespace std;
 
 int main()
 {
+  SSLClientContext context;
+
+//  SSLSession sess{};
+  
   TCPSocket sock;
   sock.connect({"www.cs.stanford.edu", "http"});
   sock.write("GET / HTTP/1.1\r\nhost: www.cs.stanford.edu\r\n\r\n");

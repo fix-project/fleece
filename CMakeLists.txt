@@ -6,6 +6,10 @@ project(fleece)
 
 find_package(PkgConfig REQUIRED)
 
+pkg_check_modules( SSL REQUIRED libssl libcrypto )
+include_directories( ${SSL_INCLUDE_DIRS} )
+add_compile_options( ${SSL_CFLAGS} )
+
 include(etc/build_type.cmake)
 include(etc/cflags.cmake)
 include(etc/clang_format.cmake)
