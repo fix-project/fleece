@@ -1,6 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "eventloop.hh"
 #include "socket.hh"
 #include "secure_socket.hh"
 
@@ -52,15 +53,18 @@ int main()
   sess.socket().connect({hostname, "https"});
   sess.outbound_plaintext().push_from_const_str("GET / HTTP/1.1\r\nhost: www.cs.stanford.edu\r\n\r\n");
 
-  while(true) {
-    if (sess.want_write()) {
-      sess.do_write();
-    }
-    if (sess.want_read()) {
-      sess.do_read();
-    }
-    if (not sess.inbound_plaintext().readable_region().empty()) {
-      sess.inbound_plaintext().pop_to_fd(output);
-    }
+  EventLoop loop;
+
+  loop.add_rule(
+    "SSL read", sess.socket(), Direction::In, [&] { sess.do_read(); }, [&] { return sess.want_read(); } );
+
+  loop.add_rule(
+    "SSL write", sess.socket(), Direction::Out, [&] { sess.do_write(); }, [&] { return sess.want_write(); } );
+
+  loop.add_rule(
+    "SSL read", [&] { sess.inbound_plaintext().pop_to_fd(output); }, [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
+
+  while ( loop.wait_next_event( -1 ) != EventLoop::Result::Exit ) {
   }
 }
+
