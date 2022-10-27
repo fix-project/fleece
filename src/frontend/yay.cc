@@ -2,8 +2,9 @@
 #include <unistd.h>
 
 #include "eventloop.hh"
-#include "socket.hh"
 #include "secure_socket.hh"
+#include "socket.hh"
+#include "timer.hh"
 
 using namespace std;
 
@@ -51,8 +52,9 @@ int main()
   context.trust_certificate( cert );
   const string hostname { "cs.stanford.edu" };
   SSLSession sess { context.make_SSL_handle(), {}, hostname };
-  sess.socket().connect( { hostname, "https" } );
   sess.socket().set_blocking( false );
+
+  sess.socket().connect( { hostname, "https" } );
 
   sess.outbound_plaintext().push_from_const_str(
     "GET / HTTP/1.1\r\nhost: www.cs.stanford.edu\r\nConnection: close\r\n\r\n" );
@@ -66,11 +68,19 @@ int main()
     "SSL write", sess.socket(), Direction::Out, [&] { sess.do_write(); }, [&] { return sess.want_write(); } );
 
   loop.add_rule(
-    "SSL read",
+    "Write output",
     output,
     Direction::Out,
     [&] { sess.inbound_plaintext().pop_to_fd( output ); },
     [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
 
   while ( loop.wait_next_event( -1 ) != EventLoop::Result::Exit ) {}
+
+  cout << "\n";
+
+  loop.summary( cout );
+
+  cout << "\n";
+
+  global_timer().summary( cout );
 }
