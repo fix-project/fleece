@@ -16,7 +16,9 @@ include(etc/clang_format.cmake)
 include(etc/tests.cmake)
 
 include_directories("${PROJECT_SOURCE_DIR}/src/util")
+include_directories("${PROJECT_SOURCE_DIR}/src/http")
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/util")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/frontend")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/http")
 
