@@ -44,14 +44,18 @@ jjxDah2nGN59PRbxYvnKkKj9
 
 int main()
 {
-  FileDescriptor output{CheckSystemCall("dup", dup(STDOUT_FILENO))};
+  FileDescriptor output { CheckSystemCall( "dup", dup( STDOUT_FILENO ) ) };
+  output.set_blocking( false );
 
   SSLClientContext context;
-  context.trust_certificate(cert);
-  const string hostname{"cs.stanford.edu"};
-  SSLSession sess{context.make_SSL_handle(), {}, hostname};
-  sess.socket().connect({hostname, "https"});
-  sess.outbound_plaintext().push_from_const_str("GET / HTTP/1.1\r\nhost: www.cs.stanford.edu\r\n\r\n");
+  context.trust_certificate( cert );
+  const string hostname { "cs.stanford.edu" };
+  SSLSession sess { context.make_SSL_handle(), {}, hostname };
+  sess.socket().connect( { hostname, "https" } );
+  sess.socket().set_blocking( false );
+
+  sess.outbound_plaintext().push_from_const_str(
+    "GET / HTTP/1.1\r\nhost: www.cs.stanford.edu\r\nConnection: close\r\n\r\n" );
 
   EventLoop loop;
 
@@ -62,9 +66,11 @@ int main()
     "SSL write", sess.socket(), Direction::Out, [&] { sess.do_write(); }, [&] { return sess.want_write(); } );
 
   loop.add_rule(
-    "SSL read", [&] { sess.inbound_plaintext().pop_to_fd(output); }, [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
+    "SSL read",
+    output,
+    Direction::Out,
+    [&] { sess.inbound_plaintext().pop_to_fd( output ); },
+    [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
 
-  while ( loop.wait_next_event( -1 ) != EventLoop::Result::Exit ) {
-  }
+  while ( loop.wait_next_event( -1 ) != EventLoop::Result::Exit ) {}
 }
-
