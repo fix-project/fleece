@@ -17,6 +17,7 @@ include(etc/tests.cmake)
 
 include_directories("${PROJECT_SOURCE_DIR}/src/util")
 include_directories("${PROJECT_SOURCE_DIR}/src/http")
+include_directories("${PROJECT_SOURCE_DIR}/src/aws")
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/util")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/frontend")
