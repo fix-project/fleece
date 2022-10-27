@@ -3,6 +3,7 @@
 #include <queue>
 #include <string>
 #include <string_view>
+#include <optional>
 
 #include "http_reader.hh"
 #include "http_structures.hh"

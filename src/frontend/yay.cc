@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "eventloop.hh"
+#include "http_client.hh"
 #include "secure_socket.hh"
 #include "socket.hh"
 #include "timer.hh"
@@ -50,14 +51,22 @@ int main()
 
   SSLClientContext context;
   context.trust_certificate( cert );
-  const string hostname { "cs.stanford.edu" };
+  const string hostname { "www.cs.stanford.edu" };
   SSLSession sess { context.make_SSL_handle(), {}, hostname };
   sess.socket().set_blocking( false );
 
   sess.socket().connect( { hostname, "https" } );
 
-  sess.outbound_plaintext().push_from_const_str(
-    "GET / HTTP/1.1\r\nhost: www.cs.stanford.edu\r\nConnection: close\r\n\r\n" );
+  HTTPClient client;
+  {
+    HTTPRequest req;
+    req.method = "GET";
+    req.request_target = "/";
+    req.http_version = "HTTP/1.1";
+    req.headers.host = hostname;
+    req.headers.connection = "close";
+    client.push_request( move( req ) );
+  }
 
   EventLoop loop;
 
@@ -73,6 +82,11 @@ int main()
     Direction::Out,
     [&] { sess.inbound_plaintext().pop_to_fd( output ); },
     [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
+
+  loop.add_rule(
+    "Send req",
+    [&] { client.write( sess.outbound_plaintext() ); },
+    [&] { return !client.requests_empty() && !sess.outbound_plaintext().writable_region().empty(); } );
 
   while ( loop.wait_next_event( -1 ) != EventLoop::Result::Exit ) {}
 
