@@ -69,6 +69,7 @@ int main()
   }
 
   EventLoop loop;
+  HTTPResponse resp;
 
   loop.add_rule(
     "SSL read", sess.socket(), Direction::In, [&] { sess.do_read(); }, [&] { return sess.want_read(); } );
@@ -77,10 +78,13 @@ int main()
     "SSL write", sess.socket(), Direction::Out, [&] { sess.do_write(); }, [&] { return sess.want_write(); } );
 
   loop.add_rule(
-    "Write output",
-    output,
-    Direction::Out,
-    [&] { sess.inbound_plaintext().pop_to_fd( output ); },
+    "Receive reply",
+    [&] {
+      bool is_done = client.read( sess.inbound_plaintext(), resp );
+      if ( is_done ) {
+        cout << "got reply with code: " << resp.status_code << " and reason phrase " << resp.reason_phrase << "\n";
+      }
+    },
     [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
 
   loop.add_rule(
