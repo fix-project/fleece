@@ -5,7 +5,7 @@
 
 using namespace std;
 
-string sha256buf_to_string_( const unsigned char* buf )
+std::string sha256buf_to_string_( const unsigned char* buf )
 {
   char sbuf[2 * SHA256_DIGEST_LENGTH + 1];
   for ( unsigned i = 0; i < SHA256_DIGEST_LENGTH; i++ ) {
@@ -14,11 +14,11 @@ string sha256buf_to_string_( const unsigned char* buf )
   return string( sbuf, 2 * SHA256_DIGEST_LENGTH );
 }
 
-string sha256::encode( string input )
+std::string sha256::encode( string input )
 {
   unsigned char output[SHA256_DIGEST_LENGTH];
 
-  SHA256( (unsigned char*)input.c_str(), input.length(), output );
+  SHA256( (const unsigned char*)input.c_str(), input.length(), output );
 
   return sha256buf_to_string_( output );
 }
