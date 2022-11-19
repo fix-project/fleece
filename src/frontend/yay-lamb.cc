@@ -1,17 +1,100 @@
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
+#include <openssl/hmac.h>
+#include <string>
+#include <string_view>
 #include <unistd.h>
 
 #include "certificates.hh"
 #include "eventloop.hh"
 #include "http_client.hh"
 #include "secure_socket.hh"
+#include "sha256.hh"
 #include "socket.hh"
 #include "timer.hh"
 
 using namespace std;
 
+void calculate_sig( string string_to_sign )
+{
+  string date = "20221118";
+  string region = "us-east-1";
+  string service = "lambda";
+  string composed_key = "AWS4"s + notnull( "getting AWS_SECRET_ACCESS_KEY", getenv( "AWS_SECRET_ACCESS_KEY" ) );
+
+  sha256_hash kDate = hmac_sha256( composed_key, date );
+  sha256_hash kRegion = hmac_sha256( make_view( kDate ), region );
+  sha256_hash kService = hmac_sha256( make_view( kRegion ), service );
+  sha256_hash kSigning = hmac_sha256( make_view( kService ), "aws4_request" );
+
+  sha256_hash final_sig = hmac_sha256( make_view( kSigning ), string_to_sign );
+  stringstream ss;
+  for ( int ch : final_sig ) {
+    ss << hex << ch;
+  }
+}
+
+string x_amz_date_( const time_t& t )
+{
+  char sbuf[17];
+  strftime( sbuf, 17, "%Y%m%dT%H%M%SZ", gmtime( &t ) );
+  return string( sbuf, 16 );
+}
+
+string create_string_to_sign( string can_request )
+{
+  stringstream res;
+  res << "AWS4-HMAC-SHA256\n";
+  res << x_amz_date_( time( 0 ) ) + "\n";
+  res << "20221118/us-east-1/iam/aws4_request\n";
+  sha256_hash hash_can_req = sha256( can_request );
+  for ( int ch : hash_can_req ) {
+    res << hex << ch;
+  }
+
+  cout << "STRING TO SIGN:" << endl;
+  cout << res.str() << endl;
+  cout << "====================" << endl;
+
+  return res.str();
+}
+
+string create_can_request( HTTPRequest& req )
+{
+  stringstream can_req;
+  can_req << req.method + "\n";
+  can_req << req.request_target + "\n";
+  can_req << "\n";                                     // assuming no query string, so just blank line
+  can_req << "host:" + req.headers.host + "\n" + "\n"; // need an extra newline at the end of the canonical headers
+  can_req << "host\n";
+
+  sha256_hash hash = sha256( req.body );
+  for ( int ch : hash ) {
+    can_req << hex << ch;
+  }
+
+  cout << "CANONICAL REQUEST:" << endl;
+  cout << can_req.str() << endl;
+  cout << "====================" << endl;
+
+  return can_req.str();
+}
+
 int main()
 {
+  const string hostname { "lambda.us-east-1.amazonaws.com" };
+  HTTPRequest req;
+  req.method = "GET";
+  req.request_target = "/2016-08-19/account-settings/";
+  req.http_version = "HTTP/1.1";
+  req.headers.host = hostname;
+  req.headers.connection = "close";
+  string can_request = create_can_request( req );
+  string string_to_sign = create_string_to_sign( can_request );
+  calculate_sig( string_to_sign );
+
+  /*
   FileDescriptor output { CheckSystemCall( "dup", dup( STDOUT_FILENO ) ) };
   output.set_blocking( false );
 
@@ -66,5 +149,5 @@ int main()
 
   cout << "\n";
 
-  global_timer().summary( cout );
+  global_timer().summary( cout ); */
 }
