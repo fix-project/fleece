@@ -5,3 +5,5 @@ using sha256_hash = std::array<uint8_t, 32>; // equal to SHA256_DIGEST_LENGTH, b
                                              // OpenSSL into the global namespace
 
 void sha256( const std::string_view input, sha256_hash& hash );
+
+std::string_view make_view( const sha256_hash& hash );
