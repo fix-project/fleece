@@ -16,7 +16,7 @@
 
 using namespace std;
 
-void calculate_sig( string string_to_sign )
+void calculate_sig( HTTPRequest& req, string string_to_sign )
 {
   string date = "20221118";
   string region = "us-east-1";
@@ -33,6 +33,19 @@ void calculate_sig( string string_to_sign )
   for ( int ch : final_sig ) {
     ss << hex << ch;
   }
+
+  stringstream ss2;
+  ss2 << "AWS4-HMAC-SHA256 ";
+  ss2 << "Credential=";
+  ss2 << getenv( "AWS_ACCESS_KEY_ID" );
+  ss2 << "/20221118/us-east-1/iam/aws4_request, ";
+  ss2 << "SignedHeaders=host, ";
+  ss2 << "Signature=" << ss.str();
+
+  cout << "AUTHORIZATION HEADER CONTENTS:" << endl;
+  cout << ss2.str() << endl;
+
+  req.headers.authorization = ss2.str();
 }
 
 string x_amz_date_( const time_t& t )
@@ -92,10 +105,8 @@ int main()
   req.headers.connection = "close";
   string can_request = create_can_request( req );
   string string_to_sign = create_string_to_sign( can_request );
-  calculate_sig( string_to_sign );
-
-  /*
-  FileDescriptor output { CheckSystemCall( "dup", dup( STDOUT_FILENO ) ) };
+  calculate_sig( req, string_to_sign );
+  /*FileDescriptor output { CheckSystemCall( "dup", dup( STDOUT_FILENO ) ) };
   output.set_blocking( false );
 
   SSLClientContext context;
@@ -108,13 +119,18 @@ int main()
 
   HTTPClient client;
   {
+    const string hostname { "lambda.us-east-1.amazonaws.com" };
     HTTPRequest req;
     req.method = "GET";
     req.request_target = "/2016-08-19/account-settings/";
     req.http_version = "HTTP/1.1";
     req.headers.host = hostname;
     req.headers.connection = "close";
-    client.push_request( move( req ) );
+    string can_request = create_can_request( req );
+    string string_to_sign = create_string_to_sign( can_request );
+    calculate_sig( req, string_to_sign );
+
+    // client.push_request( move( req ) );
   }
 
   EventLoop loop;
@@ -149,5 +165,5 @@ int main()
 
   cout << "\n";
 
-  global_timer().summary( cout ); */
+  global_timer().summary( cout );*/
 }
