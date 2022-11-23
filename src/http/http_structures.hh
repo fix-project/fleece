@@ -13,6 +13,7 @@ struct HTTPHeaders
   std::string origin {};
   std::string sec_websocket_key {}, sec_websocket_accept {};
   std::string authorization {};
+  std::string date {};
 };
 
 struct HTTPRequest
