@@ -148,7 +148,8 @@ int main()
     [&] {
       bool is_done = client.read( sess.inbound_plaintext(), resp );
       if ( is_done ) {
-        cout << "got reply with code: " << resp.status_code << " and reason phrase " << resp.reason_phrase << "\n";
+        cout << "got reply with code: " << resp.status_code << " and reason phrase: " << resp.reason_phrase << "\n";
+        cout << "reply body: " << resp.body << endl;
       }
     },
     [&] { return not sess.inbound_plaintext().readable_region().empty(); } );
