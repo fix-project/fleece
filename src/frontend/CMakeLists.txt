@@ -4,4 +4,4 @@ macro (add_exec name)
 endmacro (add_exec)
 
 add_exec(yay)
-add_exec(yay-lamb)
+add_exec(accountsettings)
